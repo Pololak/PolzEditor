@@ -1,0 +1,17 @@
+{
+	"geode": "4.7.0",
+	"gd": {
+		"win": "1.920",
+		"android": "1.920"
+	},
+	"id": "pololak.polzeditor",
+	"name": "PolzEditor",
+	"version": "v1.0.0",
+	"developer": "Pololak",
+	"description": "Editor features from PolzHax.",
+	"resources": {
+		"sprites": [
+			"resources/*.png"
+		]
+	}
+}
