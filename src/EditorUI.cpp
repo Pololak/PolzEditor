@@ -3,6 +3,8 @@
 using namespace geode::prelude;
 
 #include <Geode/modify/EditorUI.hpp>
+#include "utils.hpp"
+#include "moveForCommand.hpp"
 
 class $modify(PolzEditorUI, EditorUI) {
     CCArray* getSelectedObjectsOfCCArray() { // funny thing
@@ -177,4 +179,56 @@ class $modify(PolzEditorUI, EditorUI) {
         EditorUI::onCopy(sender);
         clipboard::write(this->m_clipboard);
     }
+
+    void selectObject(GameObject* p0) {
+        auto selectedCustomMode = GameManager::get()->getIntGameVariable("0005");
+        if (selectedCustomMode != 3) GameManager::get()->setIntGameVariable("0006", 0);
+        int selectFilterObject = GameManager::get()->getIntGameVariable("0006");
+
+        if ((selectFilterObject != 0) && Mod::get()->getSavedValue<bool>("select-filter")) {
+            if (p0->m_objectID == selectFilterObject) EditorUI::selectObject(p0);
+        }
+        else EditorUI::selectObject(p0);
+    }
+
+    void selectObjects(CCArray* p0) {
+        auto selectedCustomMode = GameManager::get()->getIntGameVariable("0005");
+        if (selectedCustomMode != 3) GameManager::get()->setIntGameVariable("0006", 0);
+        int selectFilterObject = GameManager::get()->getIntGameVariable("0006");
+
+        if ((selectFilterObject != 0) && Mod::get()->getSavedValue<bool>("select-filter")) {
+            auto filteredObjects = CCArray::create();
+            for (auto obj : CCArrayExt<GameObject*>(p0)) {
+                if (obj->m_objectID == selectFilterObject)
+                    filteredObjects->addObject(obj);
+            }
+            return EditorUI::selectObjects(filteredObjects);
+        }
+        else return EditorUI::selectObjects(p0);
+
+        EditorUI::selectObjects(p0);
+    }
+
+    void onSelectFilter(CCObject*) {
+        Mod::get()->setSavedValue<bool>("select-filter", !Mod::get()->getSavedValue<bool>("select-filter")); // Maybe I'm doing this wrong?
+        log::debug("{}", Mod::get()->getSavedValue<bool>("select-filter"));
+    }
+
+    void setupDeleteMenu() {
+        EditorUI::setupDeleteMenu();
+
+        auto toggleOn = CCSprite::createWithSpriteFrameName("GJ_checkOn_001.png");
+		auto toggleOff = CCSprite::createWithSpriteFrameName("GJ_checkOff_001.png");
+
+        auto onSelectFilter = CCMenuItemToggler::create(toggleOff, toggleOn, this, menu_selector(PolzEditorUI::onSelectFilter));
+        onSelectFilter->toggle(Mod::get()->getSavedValue<bool>("select-filter"));
+        onSelectFilter->setID("select-filter-toggler"_spr);
+        onSelectFilter->setPosition(150.f, -18.f);
+        onSelectFilter->setScale(.8f);
+        this->m_deleteMenu->addChild(onSelectFilter);
+    }
+
+    // CCPoint getLimitedPosition(CCPoint p0) {
+    //     return 0;
+    // }
 };
