@@ -6,13 +6,51 @@
 	},
 	"id": "pololak.polzeditor",
 	"name": "PolzEditor",
-	"version": "v1.0.0",
+	"version": "v1.0.2",
 	"developer": "Pololak",
 	"description": "Editor features from PolzHax.",
 	"resources": {
 		"sprites": [
 			"resources/*.png"
 		]
+	},
+	"settings": {
+		"duration-lines": {
+			"type": "bool",
+			"name": "Duration Lines",
+			"default": false
+		},
+		"editor-zoom-bypass": {
+			"type": "bool",
+			"name": "Editor Zoom Bypass",
+			"default": false
+		},
+		"object-layering": {
+			"type": "bool",
+			"name": "Experimental Object Layering",
+			"default": false
+		},
+		"free-scroll": {
+			"type": "bool",
+			"name": "Free Editor Scroll",
+			"default": false
+		},
+		"scroll-zoom":	{
+			"type": "bool",
+			"name": "Scroll Zoom",
+			"default": false,
+			"platforms": ["desktop"]
+		},
+		"select-filter": {
+			"type": "bool",
+			"name": "Select Filter",
+			"default": false
+		},
+		"polz-object-info": {
+			"type": "bool",
+			"name": "Show Object Info",
+			"default": false
+		}
 	},
 	"tags": ["editor"]
 }

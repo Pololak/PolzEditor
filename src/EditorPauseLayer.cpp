@@ -1,4 +1,5 @@
 #include <Geode/Geode.hpp>
+#include <Geode/ui/GeodeUI.hpp>
 
 using namespace geode::prelude;
 
@@ -21,11 +22,18 @@ class $modify(PolzEditorPauseLayer, EditorPauseLayer) {
         FLAlertLayer::create(&saveProtocol, "Save", "<cy>Save</c> the level?", "NO", "YES", 300.f, false, 140.f)->show();
     }
 
+    void onPolzSettings(CCObject*) {
+        geode::openSettingsPopup(Mod::get());
+    }
+
     void customSetup() {
         m_editorPauseLayer = this;
         EditorPauseLayer::customSetup();
 
+        auto director = CCDirector::get();
+
         auto actions_menu = typeinfo_cast<CCMenu*>(this->getChildren()->objectAtIndex(0)); // temp thing
+        auto some_menu = static_cast<CCMenu*>(this->m_audioOnBtn->getParent());
 
         this->m_audioOnBtn->setPositionY(this->m_audioOnBtn->getPositionY() - 12.f);
         this->m_audioOffBtn->setPositionY(this->m_audioOffBtn->getPositionY() - 12.f);
@@ -42,5 +50,19 @@ class $modify(PolzEditorPauseLayer, EditorPauseLayer) {
         onSave->setID("onSave-button"_spr);
         onSave->setPositionY(-45.f);
         actions_menu->addChild(onSave);
+
+        auto onPolzSettingsSpr = CCSprite::createWithSpriteFrameName("GJ_optionsBtn02_001.png");
+        onPolzSettingsSpr->setScale(.8f);
+        auto onPolzSettings = CCMenuItemSpriteExtra::create(onPolzSettingsSpr, this, menu_selector(PolzEditorPauseLayer::onPolzSettings));
+        onPolzSettings->setID("onPolzSettings-button"_spr);
+        onPolzSettings->setPosition(some_menu->convertToNodeSpace({director->getScreenRight() - 104.5f, director->getScreenBottom() + 30.f}));
+        some_menu->addChild(onPolzSettings);
     }
+
+    #ifdef GEODE_IS_WINDOWS
+    void keyDown(enumKeyCodes p0) {
+        if (p0 == KEY_Escape) this->onResume(nullptr);
+        else EditorPauseLayer::keyDown(p0);
+    }
+    #endif
 };

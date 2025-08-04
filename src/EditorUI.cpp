@@ -7,6 +7,10 @@ using namespace geode::prelude;
 #include "moveForCommand.hpp"
 
 class $modify(PolzEditorUI, EditorUI) {
+    struct Fields {
+        bool m_isHoldingInEditor;
+    };
+
     CCArray* getSelectedObjectsOfCCArray() { // funny thing
         auto output = CCArray::create();
         GameObject* single = this->m_selectedObject;
@@ -121,6 +125,11 @@ class $modify(PolzEditorUI, EditorUI) {
         onGoToGroup->setVisible(false);
         rightMenu->addChild(onGoToGroup);
 
+        auto slider = this->m_positionSlider;
+        slider->setAnchorPoint({0.f, 0.f});
+        slider->setPosition(winSize.width / 2.f, director->getScreenTop() - 19.5f);
+        slider->setScale(.8f);
+
         return true;
     }
 
@@ -172,7 +181,7 @@ class $modify(PolzEditorUI, EditorUI) {
     }   
 
     void constrainGameLayerPosition() {
-        return; // Free Scroll
+        if (!Mod::get()->getSettingValue<bool>("free-scroll")) return EditorUI::constrainGameLayerPosition();
     }
 
     void onCopy(CCObject* sender) {
@@ -185,7 +194,7 @@ class $modify(PolzEditorUI, EditorUI) {
         if (selectedCustomMode != 3) GameManager::get()->setIntGameVariable("0006", 0);
         int selectFilterObject = GameManager::get()->getIntGameVariable("0006");
 
-        if ((selectFilterObject != 0) && Mod::get()->getSavedValue<bool>("select-filter")) {
+        if ((selectFilterObject != 0) && Mod::get()->getSettingValue<bool>("select-filter")) {
             if (p0->m_objectID == selectFilterObject) EditorUI::selectObject(p0);
         }
         else EditorUI::selectObject(p0);
@@ -196,7 +205,7 @@ class $modify(PolzEditorUI, EditorUI) {
         if (selectedCustomMode != 3) GameManager::get()->setIntGameVariable("0006", 0);
         int selectFilterObject = GameManager::get()->getIntGameVariable("0006");
 
-        if ((selectFilterObject != 0) && Mod::get()->getSavedValue<bool>("select-filter")) {
+        if ((selectFilterObject != 0) && Mod::get()->getSettingValue<bool>("select-filter")) {
             auto filteredObjects = CCArray::create();
             for (auto obj : CCArrayExt<GameObject*>(p0)) {
                 if (obj->m_objectID == selectFilterObject)
@@ -209,26 +218,124 @@ class $modify(PolzEditorUI, EditorUI) {
         EditorUI::selectObjects(p0);
     }
 
-    void onSelectFilter(CCObject*) {
-        Mod::get()->setSavedValue<bool>("select-filter", !Mod::get()->getSavedValue<bool>("select-filter")); // Maybe I'm doing this wrong?
-        log::debug("{}", Mod::get()->getSavedValue<bool>("select-filter"));
+    #ifdef GEODE_IS_WINDOWS
+    void scrollWheel(float dy, float dx) {
+        if (!Mod::get()->getSettingValue<bool>("scroll-zoom")) return EditorUI::scrollWheel(dy, dx);
+
+        float prevScale = this->m_editorLayer->m_gameLayer->getScale();
+        auto swipeStart = this->m_editorLayer->m_gameLayer->convertToNodeSpace(this->m_pUnknown4) * prevScale;
+
+        auto kb = CCDirector::get()->m_pKeyboardDispatcher;
+
+        if (kb->getControlKeyPressed()) {
+            auto zoom = this->m_editorLayer->m_gameLayer->getScale();
+            zoom = static_cast<float>(std::pow(2.71828182845904523536, std::log(std::max(zoom, 0.001f)) + dy * 0.01f));
+            zoom = std::max(zoom, 0.1f);
+            zoom = std::min(zoom, 1000000.f);
+            this->updateZoom(zoom);
+
+            auto winSize = CCDirector::get()->getWinSize();
+            auto winSizePx = CCDirector::get()->getOpenGLView()->getViewPortRect();
+            auto ratio_w = winSize.width / winSizePx.size.width;
+            auto ratio_h = winSize.height / winSizePx.size.height;
+
+            auto mpos = CCDirector::get()->getOpenGLView()->getMousePosition();
+            mpos.y = winSizePx.size.height - mpos.y;
+
+            mpos.x *= ratio_w;
+            mpos.y *= ratio_h;
+
+            mpos = mpos - winSize / 2.f;
+
+            if (dy > 0.f)
+                mpos = -mpos * .5f;
+
+            this->m_editorLayer->m_gameLayer->setPosition(
+                this->m_editorLayer->m_gameLayer->getPosition() + mpos / std::max(zoom, 5.f));
+
+            this->constrainGameLayerPosition();
+        }
+        else if (kb->getShiftKeyPressed()) {
+            this->m_editorLayer->m_gameLayer->setPositionX(this->m_editorLayer->m_gameLayer->getPositionX() - dy * 1.f);
+        }
+        else {
+            EditorUI::scrollWheel(dy, dx);
+        }
+    }
+    #endif
+
+    void moveObject(GameObject* p0, CCPoint p1) {
+        if (!p0) return;
+        EditorUI::moveObject(p0, p1);
     }
 
-    void setupDeleteMenu() {
-        EditorUI::setupDeleteMenu();
-
-        auto toggleOn = CCSprite::createWithSpriteFrameName("GJ_checkOn_001.png");
-		auto toggleOff = CCSprite::createWithSpriteFrameName("GJ_checkOff_001.png");
-
-        auto onSelectFilter = CCMenuItemToggler::create(toggleOff, toggleOn, this, menu_selector(PolzEditorUI::onSelectFilter));
-        onSelectFilter->toggle(Mod::get()->getSavedValue<bool>("select-filter"));
-        onSelectFilter->setID("select-filter-toggler"_spr);
-        onSelectFilter->setPosition(150.f, -18.f);
-        onSelectFilter->setScale(.8f);
-        this->m_deleteMenu->addChild(onSelectFilter);
+    bool ccTouchBegan(CCTouch* p0, CCEvent* p1) {
+        m_fields->m_isHoldingInEditor = true;
+        return EditorUI::ccTouchBegan(p0, p1);
     }
 
-    // CCPoint getLimitedPosition(CCPoint p0) {
-    //     return 0;
-    // }
+    void ccTouchEnded(CCTouch* p0, CCEvent* p1) {
+        m_fields->m_isHoldingInEditor = false;
+        return EditorUI::ccTouchEnded(p0, p1);
+    }
+
+    void onPlaytest(CCObject* sender) {
+        if (!m_fields->m_isHoldingInEditor) EditorUI::onPlaytest(sender);
+    }
+
+    #ifdef GEODE_IS_WINDOWS
+    void zoomIn(CCObject* p0) {
+        if (Mod::get()->getSettingValue<bool>("editor-zoom-bypass")) {
+            float amt = this->m_editorLayer->m_gameLayer->getScale();
+            float fin = 0.f;
+            fin = amt + .1f;
+            this->updateZoom(fin);
+        }
+        else EditorUI::zoomIn(p0);
+    }
+
+    void zoomOut(CCObject* p0) {
+        if (Mod::get()->getSettingValue<bool>("editor-zoom-bypass")) {
+            float amt = this->m_editorLayer->m_gameLayer->getScale();
+            float fin = 0.f;
+            fin = amt - .1f;
+            if (fin < .1f) fin = .1f;
+            this->updateZoom(fin);
+        }
+        else EditorUI::zoomOut(p0);
+    }
+    #endif
+
+    #ifdef GEODE_IS_ANDROID
+    CCPoint getLimitedPosition(CCPoint p0) {
+        log::debug("{} {}", p0.x, p0.y);
+        return p0;
+    }
+    
+    void zoomGameLayer(bool p0) {
+        if (Mod::get()->getSettingValue<bool>("editor-zoom-bypass")) {
+            if (p0) {
+                float amt = this->m_editorLayer->m_gameLayer->getScale();
+                float fin = amt + .1f;
+                this->updateZoom(fin);
+            }
+            else {
+                float amt = this->m_editorLayer->m_gameLayer->getScale();
+                float fin = amt - .1f;
+                if (fin < .1f) fin = .1f;
+                this->updateZoom(fin);
+            }
+        }
+        else EditorUI::zoomGameLayer(p0);
+    }
+    #endif
 };
+
+// CCPoint* EditorUI_getLimitedPosition(CCPoint* retval, CCPoint point) {
+//     *retval = point;
+//     return retval;
+// }
+
+// $execute {
+//     Mod::get()->hook(reinterpret_cast<void*>(geode::base::get() + 0x4b500), &EditorUI_getLimitedPosition, "EditorUI::getLimitedPosition", tulip::hook::TulipConvention::Stdcall);
+// }

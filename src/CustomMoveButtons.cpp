@@ -7,6 +7,16 @@ using namespace geode::prelude;
 #include "moveForCommand.hpp"
 
 class $modify(CMEditUI, EditorUI) {
+    CCArray* getSelectedObjectsOfCCArray() { // funny thing
+        auto output = CCArray::create();
+        GameObject* single = this->m_selectedObject;
+        if (single) {
+            output->addObject(single);
+            return output;
+        }
+        return this->m_selectedObjects;
+    }
+
     CCPoint moveForCommand(EditCommand p0) {
         float gridSize = this->m_gridSize;
         switch (p0) {
@@ -37,6 +47,24 @@ class $modify(CMEditUI, EditorUI) {
 
         default: return EditorUI::moveForCommand(p0);
         }
+    }
+
+    void transformObject(GameObject* p0, EditCommand p1, bool p2) {
+        CCArray* selectedObjects = this->getSelectedObjectsOfCCArray();
+        auto selectedObjCount = selectedObjects->count();
+        if (p0->canRotateFree()) {
+            switch (p1) {
+                case rotationForCommand::kEditCommandRotate45CW:
+                    this->rotateObjects(selectedObjects, (45.f / selectedObjCount), {0.f, 0.f}); break;
+                case rotationForCommand::kEditCommandRotate45CCW:
+                    this->rotateObjects(selectedObjects, -(45.f / selectedObjCount), {0.f, 0.f}); break;
+                case rotationForCommand::kEditCommandRotate265CW:
+                    this->rotateObjects(selectedObjects, (26.f / selectedObjCount), {0.f, 0.f}); break;
+                case rotationForCommand::kEditCommandRotate265CCW:
+                    this->rotateObjects(selectedObjects, -(26.f / selectedObjCount), {0.f, 0.f}); break;
+            }
+        }
+        EditorUI::transformObject(p0, p1, p2);
     }
 
     void onCustomMoveObject(CCObject* obj) {

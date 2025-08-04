@@ -21,7 +21,7 @@ class $modify(CustomizeObjectLayer) {
         dl_btn->setID("dline-button"_spr);
         dl_btn->setPosition(-80.f, 5.f);
 
-        from<cocos2d::CCArray*>(this, 0x1c4)->addObject(dl_spr);
+        this->m_buttonsArray->addObject(dl_spr);
         this->m_buttonMenu->addChild(dl_btn, 0, 8);
 
         if (p0 && getColorMode(p0) == GJCustomColorMode::Col3DL) this->highlightSelected(dl_spr);
@@ -31,7 +31,7 @@ class $modify(CustomizeObjectLayer) {
         white_btn->setID("white-button"_spr);
         white_btn->setPosition(80.f, 5.f);
 
-        from<cocos2d::CCArray*>(this, 0x1c4)->addObject(white_spr);
+        this->m_buttonsArray->addObject(white_spr);
         this->m_buttonMenu->addChild(white_btn, 0, 9);
 
         if (p0 && getColorMode(p0) == (GJCustomColorMode)9) this->highlightSelected(white_spr);
